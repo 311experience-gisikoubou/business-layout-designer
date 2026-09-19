@@ -19,7 +19,7 @@ iv class="advanced-section">
         </div>
       </details>
     </aside>
-    <main class="viewport" id="viewport"><div class="stage" id="stage"><div class="paper-guide" id="paperGuide"></div><div class="empty-tip" id="emptyTip">① 左の部品をクリック → ② カードをドラッグ → ③ 右下でサイズ変更</div></div></main>
+    <main class="viewport" id="viewport"><div class="stage" id="stage"><img class="reference-image" id="referenceImage" alt="" hidden><div class="paper-guide" id="paperGuide"></div><div class="empty-tip" id="emptyTip">① 左の部品をクリック → ② カードをドラッグ → ③ 右下でサイズ変更</div></div></main>
     <div class="selection-bar" id="selectionBar" aria-live="polite"><span class="selection-count" id="selectionCount">1枚選択中</span><button class="btn" id="editSelectedBtn">✎ 編集</button><button class="btn" id="quickDuplicateBtn">複製</button><button class="btn danger" id="quickDeleteBtn">削除</button><button class="btn" id="clearSelectionBtn">選択解除</button></div>
   </div>
 </div>
@@ -39,6 +39,11 @@ iv class="advanced-section">
   const STORAGE_KEY='businessLayoutDesigner.v1';
   const DRAFT_KEY='businessLayoutDesigner.draft.v1';
   const TEMPLATE_KEY='businessLayoutDesigner.templates.v1';
+  const REFERENCE_DB_NAME='businessLayoutDesigner.reference.v1';
+  const REFERENCE_STORE='images';
+  const REFERENCE_KEY='active';
+  const REFERENCE_MAX_BYTES=25*1024*1024;
+  const REFERENCE_TYPES=new Set(['image/png','image/jpeg','image/webp']);
   const GRID=20;
   const PAPER_ORIGIN={x:800,y:260};
 
