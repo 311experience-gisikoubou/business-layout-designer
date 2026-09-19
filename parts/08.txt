@@ -2,7 +2,7 @@ emplateSelect.onchange=()=>{activeTemplateId=templateSelect.value;renderTemplate
   window.addEventListener('keydown',e=>{const tag=e.target?.tagName,editing=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||e.target?.isContentEditable;if(editing)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();selectedIds=new Set(cards.filter(c=>!c.hidden).map(c=>c.id));primaryId=[...selectedIds][0]||null;render()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateSelected()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}else if(e.key==='Escape'){selectedIds.clear();primaryId=null;refreshSelection()}else if(e.key==='Delete'||e.key==='Backspace'){deleteSelected()}});
   window.addEventListener('beforeunload',()=>{if(dirty)writeDraft()});
 
-  load();renderPaperOptions();renderPalettes();renderTemplates();updatePaperGuide();render();requestAnimationFrame(fitView);
+  load();renderPaperOptions();renderPalettes();renderTemplates();updatePaperGuide();render();loadReferenceImageFromStore();requestAnimationFrame(fitView);
 })();
 </script>
 </body>
