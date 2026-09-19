@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>業務レイアウト設計ツール</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#eef2f6;color:#334155;display:grid;place-items:center;min-height:100vh}
+.box{background:#fff;border:1px solid #d8dee8;border-radius:14px;padding:24px 28px;box-shadow:0 12px 36px rgba(15,23,42,.08);text-align:center}
+small{display:block;margin-top:8px;color:#64748b}
+</style>
+</head>
+<body>
+<div class="box" id="status">業務レイアウト設計ツールを読み込み中…<small>v0.6.9</small></div>
+<script>
+(async()=>{
+  try{
+    const files=Array.from({length:9},(_,i)=>`parts/${String(i).padStart(2,'0')}.txt`);
+    const responses=await Promise.all(files.map(f=>fetch(f,{cache:'no-store'})));
+    for(const r of responses) if(!r.ok) throw new Error(`${r.status} ${r.url}`);
+    const html=(await Promise.all(responses.map(r=>r.text()))).join('');
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(err){
+    document.getElementById('status').innerHTML='読み込みに失敗しました。<small>'+String(err)+'</small>';
+  }
+})();
+</script>
+</body>
+</html>
