@@ -1,0 +1,34 @@
+
+      {componentKey:'content',x:1270,y:300,w:910,h:380},
+      {componentKey:'table',x:820,y:710,w:1360,h:380}
+    ]}
+  };
+
+  const $=id=>document.getElementById(id);
+  const viewport=$('viewport'),stage=$('stage'),statusEl=$('status'),zoomLabel=$('zoomLabel'),emptyTip=$('emptyTip'),paperGuide=$('paperGuide'),paperSizeEl=$('paperSize'),selectionInfo=$('selectionInfo'),snapBtn=$('snapBtn'),lockBtn=$('lockBtn'),hideBtn=$('hideBtn'),genericPalette=$('genericPalette'),extensionPalette=$('extensionPalette'),extensionPackEl=$('extensionPack'),packNote=$('packNote'),hiddenList=$('hiddenList'),importFile=$('importFile'),templateSelect=$('templateSelect'),templateNote=$('templateNote'),constraintBtn=$('constraintBtn'),deleteTemplateBtn=$('deleteTemplateBtn'),editDialog=$('editDialog'),editForm=$('editForm'),editTitle=$('editTitle'),editBody=$('editBody'),selectionBar=$('selectionBar'),selectionCount=$('selectionCount'),editSelectedBtn=$('editSelectedBtn'),quickDuplicateBtn=$('quickDuplicateBtn'),quickDeleteBtn=$('quickDeleteBtn'),clearSelectionBtn=$('clearSelectionBtn');
+  let cards=[],selectedIds=new Set(),primaryId=null,editingCardId=null,view={zoom:1,panX:70,panY:60},guideVisible=true,paperSize='B5',snapEnabled=true,activeExtension='none',activeTemplateId='free',constrainToGuide=false,customTemplates={},undoStack=[],redoStack=[],dirty=false,autosaveTimer=null,lastManualSavedAt=0,lastDraftSavedAt=0;
+  const clone=v=>JSON.parse(JSON.stringify(v));
+  const snapshot=()=>({cards:clone(cards),paperSize,constrainToGuide,activeTemplateId});
+  const selectedCards=()=>cards.filter(c=>selectedIds.has(c.id));
+  const snap=v=>snapEnabled?Math.round(v/GRID)*GRID:v;
+  const setStatus=t=>statusEl.textContent=t;
+  const formatClock=ts=>ts?new Date(ts).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'';
+  function writeDraft(){if(!dirty)return;try{lastDraftSavedAt=Date.now();localStorage.setItem(DRAFT_KEY,JSON.stringify({...layoutPayload(),savedAt:lastDraftSavedAt,kind:'draft'}));setStatus(`自動保存済み ${formatClock(lastDraftSavedAt)}`)}catch{setStatus('自動保存できません・JSONバックアップ推奨')}}
+  function scheduleAutosave(){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(writeDraft,700)}
+  const markDirty=()=>{dirty=true;setStatus('変更あり・自動保存待ち');scheduleAutosave()};
+  const uid=()=>crypto.randomUUID?.()||('c'+Date.now()+Math.random());
+  const currentFormat=()=>PAPER_FORMATS[paperSize]||PAPER_FORMATS.B5;
+  const currentBounds=()=>({left:PAPER_ORIGIN.x,top:PAPER_ORIGIN.y,right:PAPER_ORIGIN.x+currentFormat().w,bottom:PAPER_ORIGIN.y+currentFormat().h});
+
+  function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+  function componentButton(key,def,source){const b=document.createElement('button');b.type='button';b.innerHTML=`＋ ${escapeHtml(def.title)}<small>${escapeHtml(def.body)}</small>`;b.addEventListener('click',()=>addCard(key,source));return b}
+  function resolveComponent(key,source){if(source==='generic')return GENERIC_COMPONENTS[key]||GENERIC_COMPONENTS.generic;return EXTENSION_PACKS[source]?.components?.[key]||GENERIC_COMPONENTS.generic}
+  function normalizeRules(c){return {required:!!c.required,deletable:c.deletable!==false,hideable:c.hideable!==false,movable:c.movable!==false,resizable:c.resizable!==false}}
+  function safeCard(c,index=0){if(!c||typeof c!=='object')throw new Error(`カード${index+1}が不正です`);const num=(v,f)=>Number.isFinite(Number(v))?Number(v):f,rules=normalizeRules(c);return {id:typeof c.id==='string'&&c.id?c.id:uid(),componentKey:typeof c.componentKey==='string'?c.componentKey:'legacy',source:typeof c.source==='string'?c.source:'generic',title:String(c.title??'カード').slice(0,200),body:String(c.body??'').slice(0,4000),x:Math.max(0,num(c.x,0)),y:Math.max(0,num(c.y,0)),w:Math.max(140,num(c.w,320)),h:Math.max(90,num(c.h,180)),locked:!!c.locked,hidden:!!c.hidden,...rules}}
+
+  function renderPaperOptions(){paperSizeEl.replaceChildren(...Object.entries(PAPER_FORMATS).map(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v.label;return o}));paperSizeEl.value=paperSize}
+  function renderPalettes(){genericPalette.replaceChildren(...Object.entries(GENERIC_COMPONENTS).map(([k,v])=>componentButton(k,v,'generic')));extensionPackEl.replaceChildren(...Object.entries(EXTENSION_PACKS).map(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v.label;return o}));extensionPackEl.value=activeExtension;const pack=EXTENSION_PACKS[activeExtension]||EXTENSION_PACKS.none;packNote.textContent=pack.note;extensionPalette.replaceChildren(...Object.entries(pack.components).map(([k,v])=>componentButton(k,v,activeExtension)));extensionPalette.style.display=Object.keys(pack.components).length?'grid':'none'}
+  function templateCatalog(){const built=Object.fromEntries(Object.entries(BUILTIN_TEMPLATES).map(([k,v])=>['builtin:'+k,{...v,builtin:true}]));const custom=Object.fromEntries(Object.entries(customTemplates).map(([k,v])=>['custom:'+k,{...v,builtin:false}]));return {...built,...custom}}
+  function renderTemplates(){const catalog=templateCatalog();templateSelect.replaceChildren(...Object.entries(catalog).map(([id,t])=>{const o=document.createElement('option');o.value=id;o.textContent=(t.builtin?'':'★ ')+t.label;return o}));if(!catalog[activeTemplateId])activeTemplateId='builtin:free';templateSelect.value=activeTemplateId;const t=catalog[activeTemplateId]||catalog['builtin:free'];templateNote.textContent=(t.note||'保存したテンプレートです。')+(constrainToGuide?' 現在：範囲制約ON。':'');deleteTemplateBtn.disabled=t.builtin;syncConstraintUi()}
+  function syncConstraintUi(){paperGuide.classList.toggle('constrained',constrainToGuide);constraintBtn.classList.toggle('active',constrainToGuide);constraintBtn.textContent=constrainToGuide?'範囲制約 ON':'範囲制約 OFF'}
+  function updatePaperGuide(){const f=currentFormat();paperGuide.style.left=PAPER_ORIGIN.x+'px';paperGuide.style.top=PAPER_ORIGIN.y+'px';paperGuide.style.width=f.w+'px';pape
