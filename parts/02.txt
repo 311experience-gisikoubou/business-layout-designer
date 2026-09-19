@@ -1,0 +1,91 @@
+iv class="advanced-section">
+          <div class="advanced-title">やり直し・バックアップ</div>
+          <div class="compact-row"><button class="btn" id="resetBtn">初期化</button><button class="btn" id="restoreSavedBtn">保存点に戻す</button></div>
+          <button class="btn" id="backupBtn">JSONバックアップ</button>
+          <div class="compact-note">変更は自動保存されます。「保存」は確定点として残ります。</div>
+          <div class="separator"></div>
+          <div class="advanced-title">テンプレート</div>
+          <select class="select pack-select" id="templateSelect" aria-label="テンプレート"></select>
+          <div class="constraint-note" id="templateNote">自由レイアウトです。</div>
+          <div class="compact-row"><button class="btn" id="applyTemplateBtn">適用</button><button class="btn" id="saveTemplateBtn">現在を保存</button></div>
+          <div class="compact-row"><button class="btn" id="deleteTemplateBtn">保存テンプレ削除</button><button class="btn" id="constraintBtn">範囲制約</button></div>
+          <div class="separator"></div>
+          <div class="advanced-title">業種別拡張</div>
+          <select class="select pack-select" id="extensionPack" aria-label="業種別拡張"></select><div class="pack-note" id="packNote">汎用コアだけで使用します。</div><div class="palette" id="extensionPalette"></div>
+          <div class="advanced-title">非表示カード</div><div class="pack-note" id="hiddenList">なし</div>
+          <div class="advanced-title">選択カードを整列</div><div class="selection-info" id="selectionInfo">選択なし</div><div class="layout-actions"><button data-align="left">左揃え</button><button data-align="top">上揃え</button><button data-align="hspace">横等間隔</button><button data-align="vspace">縦等間隔</button></div>
+          <div class="hint">複数選択：<span class="kbd">Shift</span>＋クリック。iPad等は空白を2本指でピンチ。<br><span class="kbd">Ctrl</span>+<span class="kbd">S</span> 保存 / <span class="kbd">Ctrl</span>+<span class="kbd">A</span> 全選択 / <span class="kbd">Delete</span> 削除</div>
+          <div class="arch-note">共通エンジン → 汎用部品 → 任意の業種別拡張。</div>
+        </div>
+      </details>
+    </aside>
+    <main class="viewport" id="viewport"><div class="stage" id="stage"><div class="paper-guide" id="paperGuide"></div><div class="empty-tip" id="emptyTip">① 左の部品をクリック → ② カードをドラッグ → ③ 右下でサイズ変更</div></div></main>
+    <div class="selection-bar" id="selectionBar" aria-live="polite"><span class="selection-count" id="selectionCount">1枚選択中</span><button class="btn" id="editSelectedBtn">✎ 編集</button><button class="btn" id="quickDuplicateBtn">複製</button><button class="btn danger" id="quickDeleteBtn">削除</button><button class="btn" id="clearSelectionBtn">選択解除</button></div>
+  </div>
+</div>
+<dialog class="edit-dialog" id="editDialog">
+  <form method="dialog" id="editForm" class="dialog-body">
+    <h2>カードを編集</h2>
+    <label class="field-label" for="editTitle">タイトル</label>
+    <input class="field-input" id="editTitle" maxlength="200" />
+    <label class="field-label" for="editBody">内容</label>
+    <textarea class="field-textarea" id="editBody" maxlength="4000"></textarea>
+    <div class="trial-note">レイアウト確認用の簡易編集です。入力内容はこの端末の保存データ／JSONに含まれます。</div>
+    <div class="dialog-actions"><button class="btn" value="cancel">キャンセル</button><button class="btn primary" id="editSaveBtn" value="default">反映</button></div>
+  </form>
+</dialog>
+<script>
+(() => {
+  const STORAGE_KEY='businessLayoutDesigner.v1';
+  const DRAFT_KEY='businessLayoutDesigner.draft.v1';
+  const TEMPLATE_KEY='businessLayoutDesigner.templates.v1';
+  const GRID=20;
+  const PAPER_ORIGIN={x:800,y:260};
+
+  const GENERIC_COMPONENTS={
+    info:{title:'情報カード',body:'名称・担当・日付・基本情報など',w:340,h:170},
+    content:{title:'内容カード',body:'作業内容・案件内容・工程内容など',w:430,h:250},
+    fields:{title:'入力項目',body:'ラベル・入力欄・選択項目など',w:360,h:210},
+    table:{title:'表・一覧',body:'明細・一覧・集計・履歴など',w:520,h:280},
+    checklist:{title:'チェックリスト',body:'確認項目・完了項目・点検項目など',w:360,h:230},
+    notes:{title:'メモ・備考',body:'注意事項・連絡事項・自由記述など',w:380,h:210},
+    drawing:{title:'手書きエリア',body:'ペン入力・署名・スケッチなどを想定',w:520,h:360},
+    generic:{title:'自由カード',body:'任意の業務項目に使う汎用カード',w:320,h:180}
+  };
+
+  const EXTENSION_PACKS={
+    none:{label:'なし（汎用）',note:'汎用コアだけで使用します。',components:{}},
+    dental:{label:'歯科技工・歯科',note:'歯科技工・歯科向け部品だけを追加表示します。',components:{
+      patient:{title:'患者情報',body:'患者名・医院名・納品日など',w:340,h:170},
+      dentalWork:{title:'技工作業',body:'義歯種別・咬合・リマウント・維持装置など',w:430,h:250}
+    }}
+  };
+
+  const PAPER_FORMATS={
+    B5:{label:'B5縦',w:728,h:1028,kind:'paper'},
+    A4:{label:'A4縦',w:840,h:1188,kind:'paper'},
+    A3:{label:'A3縦',w:1188,h:1680,kind:'paper'},
+    SCREEN_1440:{label:'画面 1440×900',w:1440,h:900,kind:'screen'}
+  };
+
+  const BUILTIN_TEMPLATES={
+    free:{label:'自由レイアウト',note:'配置制約なし。部品を自由に置けます。',paperSize:'B5',constrainToGuide:false,cards:[]},
+    a4Form:{label:'A4 基本帳票',note:'A4内に配置を制限。基本情報カードは必須・削除不可です。',paperSize:'A4',constrainToGuide:true,cards:[
+      {componentKey:'info',x:840,y:320,w:760,h:150,required:true,deletable:false,hideable:false},
+      {componentKey:'fields',x:840,y:500,w:760,h:220},
+      {componentKey:'table',x:840,y:750,w:760,h:360},
+      {componentKey:'notes',x:840,y:1140,w:760,h:220}
+    ]},
+    b5Instruction:{label:'B5 作業指示書',note:'B5内に配置を制限。情報・内容カードを必須にした汎用指示書です。',paperSize:'B5',constrainToGuide:true,cards:[
+      {componentKey:'info',x:820,y:300,w:688,h:150,required:true,deletable:false,hideable:false},
+      {componentKey:'content',x:820,y:480,w:688,h:260,required:true,deletable:false,hideable:false},
+      {componentKey:'checklist',x:820,y:770,w:330,h:300},
+      {componentKey:'notes',x:1178,y:770,w:330,h:300}
+    ]},
+    a4Checklist:{label:'A4 点検・チェック表',note:'A4内に配置を制限。チェックリストが必須です。',paperSize:'A4',constrainToGuide:true,cards:[
+      {componentKey:'info',x:840,y:320,w:760,h:140},
+      {componentKey:'checklist',x:840,y:490,w:760,h:500,required:true,deletable:false,hideable:false},
+      {componentKey:'notes',x:840,y:1020,w:760,h:280}
+    ]},
+    screen1440:{label:'画面 1440×900',note:'Web/業務アプリ画面用。1440×900の範囲内に配置を制限します。',paperSize:'SCREEN_1440',constrainToGuide:true,cards:[
+      {componentKey:'info',x:820,y:300,w:420,h:180},
