@@ -11,7 +11,7 @@
     <div class="brand">業務レイアウト設計ツール</div><span class="trial-badge">試用版 v0.7.0</span>
     <button class="btn" id="undoBtn">↶ 戻す</button><button class="btn" id="redoBtn">↷ やり直す</button>
     <div class="spacer"></div>
-    <span class="toolbar-core-hint hide-medium">カードを動かす → 右下でサイズ変更 → 保存</span>
+    <span class="toolbar-core-hint hide-medium">カードを動かす → 周囲のハンドルでサイズ変更 → 保存</span>
     <button class="btn" id="zoomOutBtn">−</button><div class="zoom-label" id="zoomLabel">100%</div><button class="btn" id="zoomInBtn">＋</button>
     <button class="btn" id="fitBtn">全体を見る</button>
     <button class="btn primary save-main" id="saveBtn">④ 保存</button><div class="status" id="status">未保存</div>
