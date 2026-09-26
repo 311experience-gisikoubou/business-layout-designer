@@ -18,4 +18,15 @@ assert.ok(!/XMLHttpRequest|WebSocket|openai/i.test(src),'no network/AI');
 has('pushHistory();assets[assetId]');has('p.partId=uid()');
 // return to card selection
 has('partBackBtn');has('backToCard');
+// heading/text are true editable parts: geometry is never overwritten
+const sync=src.match(/function syncBaseParts\(c\)\{[^\n]*\}/)?.[0]||'';
+assert.ok(sync.includes('h.text=c.title')&&sync.includes('t.text=c.body'),'sync keeps title/body text in sync');
+assert.ok(!/\.(x|y|width|height)\s*=/.test(sync),'syncBaseParts must not overwrite heading/text geometry');
+has('function syncCardFromPart');has('syncBaseParts(c);selectedIds');
+// heading/text are rendered and dragged as free parts (not excluded)
+assert.ok(!src.includes("if(p.partType==='heading'||p.partType==='text')return;const n="),'heading/text must not be excluded from free part layer');
+assert.ok(!src.includes('function decorateBase'),'legacy non-movable base part decoration removed');
+const layer=src.match(/function partsLayerNode\(c\)\{[\s\S]*?return layer\}/)?.[0]||'';
+assert.ok(layer.includes('startPartGesture(e,c,p,n,isResize)')&&layer.includes('part-resize')&&layer.includes('left:${p.x}px'),'free part drag/resize/geometry render');
+has('.part-heading');has('.part-text');
 console.log('parts-json-v1 source checks passed');
