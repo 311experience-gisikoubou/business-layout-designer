@@ -21,4 +21,4 @@
 - 画像部品: 下部バーの「画像を差し替え」、または画像ファイルをその部品へドラッグ＆ドロップ。その部品だけが変わり、通信はしません。
 - 「↩ カード選択に戻る」（または Esc）でカード選択へ戻ります。Undo / Redo は部品編集・画像差し替えも対象です。
 - JSON / LocalStorage: 各カードに `cardId, cardType, x, y, width, height, zIndex, parts[]`、各部品に `partId, partType, x, y, width, height, text, imageRef, fontSize, fontWeight, alignment`。画像本体はトップレベル `assets`（`imageRef` → `assetId`、dataUrl）に含まれ、JSONだけで復元できます。旧形式JSON（parts/assetsなし、`id/w/h`）もそのまま読み込めます。
-- テスト: `node tests/parts-json-v1.test.mjs`
+- テスト: `node scripts/frontend-parts-selftest.mjs`
