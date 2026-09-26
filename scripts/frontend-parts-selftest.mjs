@@ -52,4 +52,18 @@ const cardPd=src.match(/el\.addEventListener\('pointerdown',[^\n]*\);return el\}
 assert.ok(cardPd.includes('.part-free')&&!/closest\('\.mini,\.resize-handle,\.part-free'\)/.test(cardPd),'card handler receives free-part pointerdown');
 assert.ok(cardPd.includes('toggleOnClick:wasSelected&&!additive')&&cardPd.includes('basePartId:baseEl?.dataset.partId'),'click on selected card part enters part mode');
 has('selectPart(c.id,basePartId)');
+// defect 3: duplicateSelected keeps copied card title AND copied heading-part text (functional)
+const buildDup=new Function('uid','clone','selectedCards','pushHistory','clampCardToGuide','markDirty','render',`${partTypes}\n${['normalizeRules','safeCardBase','isRefCard','partBase','defaultParts','normalizeParts','syncBaseParts','syncCardFromPart','safeCard','duplicateSelected'].map(fn).join('\n')}\nlet cards=[],selectedIds=new Set(),primaryId=null;\nreturn {run(){cards=[];duplicateSelected();return {cards,selectedIds,primaryId}},safeCard};`);
+let dn=0;const dupUid=()=>'d'+(++dn);
+let dupSel=[];
+const dupEnv=buildDup(dupUid,o=>JSON.parse(JSON.stringify(o)),()=>dupSel,()=>{},()=>{},()=>{},()=>{});
+const dupOrig=dupEnv.safeCard({id:'o',componentKey:'generic',title:'Orig',body:'Body',x:10,y:10,w:400,h:300});
+dupSel=[dupOrig];
+const dupRes=dupEnv.run();
+assert.equal(dupRes.cards.length,1,'duplicateSelected creates one copy');
+const dupCard=dupRes.cards[0];
+assert.notEqual(dupCard.id,'o');
+assert.equal(dupCard.title,'Orig コピー','duplicated card title is preserved as "<original> コピー"');
+assert.equal(dupCard.parts.find(p=>p.partType==='heading').text,'Orig コピー','duplicated heading part text matches copied card title');
+assert.equal(dupOrig.title,'Orig','original card title untouched');
 console.log('parts-json-v1 source checks passed');
