@@ -13,3 +13,12 @@
 - 基準画像を端末内だけで読込・固定表示（PNG / JPEG / WebP、JSONへ画像本体を含めない）
 - 基準画像の一部を「画像カード」として切り出し、見た目を保ったまま移動・サイズ変更できる
 - 業種別拡張パック
+
+## カード内部品（parts-json-v1）
+
+- カードは外枠のまま。選択したカードの見出し・本文をクリック、または画像/入力欄/ボタン/チェック項目をクリックすると「部品」だけを選択できます（カードは動きません）。
+- 「画像カード」「入力フォーム」を追加すると画像・入力欄・ボタン・チェック項目の部品が付きます。部品はドラッグで移動、右下でサイズ変更できます。
+- 画像部品: 下部バーの「画像を差し替え」、または画像ファイルをその部品へドラッグ＆ドロップ。その部品だけが変わり、通信はしません。
+- 「↩ カード選択に戻る」（または Esc）でカード選択へ戻ります。Undo / Redo は部品編集・画像差し替えも対象です。
+- JSON / LocalStorage: 各カードに `cardId, cardType, x, y, width, height, zIndex, parts[]`、各部品に `partId, partType, x, y, width, height, text, imageRef, fontSize, fontWeight, alignment`。画像本体はトップレベル `assets`（`imageRef` → `assetId`、dataUrl）に含まれ、JSONだけで復元できます。旧形式JSON（parts/assetsなし、`id/w/h`）もそのまま読み込めます。
+- テスト: `node tests/parts-json-v1.test.mjs`
