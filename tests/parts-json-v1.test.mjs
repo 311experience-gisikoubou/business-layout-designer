@@ -30,7 +30,7 @@ const layer=src.match(/function partsLayerNode\(c\)\{[\s\S]*?return layer\}/)?.[
 assert.ok(layer.includes('startPartGesture(e,c,p,n,isResize)')&&layer.includes('part-resize')&&layer.includes('left:${p.x}px'),'free part drag/resize/geometry render');
 has('.part-heading');has('.part-text');
 // defect 1: imported parts[] are authoritative over stale legacy title/body (functional)
-const fn=n=>{const m=src.match(new RegExp(`^ *function ${n}\\(.*$`,'m'));assert.ok(m,`missing function ${n}`);return m[0]};
+const fn=n=>{const m=src.match(new RegExp(`^ *(?:function ${n}\\(|(?:const|let|var) ${n}\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[A-Za-z_$][\\w$]*)\\s*=>).*$`,'m'));assert.ok(m,`missing function or arrow declaration ${n}`);return m[0]};
 const partTypes=src.match(/^ *const PART_TYPES=.*$/m)[0];
 const build=new Function('uid',`${partTypes}\n${['normalizeRules','safeCardBase','isRefCard','partBase','defaultParts','normalizeParts','syncBaseParts','syncCardFromPart','safeCard'].map(fn).join('\n')}\nreturn safeCard;`);
 let n=0;const safeCard=build(()=>'id'+(++n));
