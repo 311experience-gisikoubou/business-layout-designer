@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "intakeId": "parts-json-v1",
+  "intent": "既存の業務レイアウト設計ツールを、カード内部のパーツ単位編集、画像だけの差し替え、画面再現に必要なカード・パーツ・画像資産情報のJSON完全保存・復元に対応させる。",
+  "scope": "既存のカード追加、ドラッグ移動、リサイズ、パン、ズーム、複製、削除、Undo/Redo、LocalStorage保存・復元、JSON入出力を維持したまま、最小変更で①カード内部パーツの個別選択・編集、②画像パーツのみローカル画像へ差し替え、③カードとパーツの幾何・文字スタイル・画像参照を完全保存・復元する。OpenAI API、MCP、AI自動生成、大規模バックエンド追加は対象外。",
+  "assumptions": [
+    "画像差し替えはブラウザ内のローカル処理だけで完結し、外部サービスへ送信しない。",
+    "画像パーツはpartのimageRefとJSON内assetsの画像データを分離し、位置・カードサイズ・他パーツを変更せず復元できる構造を優先する。"
+  ],
+  "humanQuestions": [],
+  "riskSignals": {
+    "protectedOrPatientData": false,
+    "externalCommunication": false,
+    "addedCostOrPaidUsage": false,
+    "authOrIdentity": false,
+    "productionImpact": false,
+    "realDataImpact": false
+  },
+  "status": "APPROVED",
+  "decisionId": "hds-20260926-parts-json-v1"
+}

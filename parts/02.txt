@@ -21,6 +21,7 @@ iv class="advanced-section">
     </aside>
     <main class="viewport" id="viewport"><div class="stage" id="stage"><img class="reference-image" id="referenceImage" alt="" hidden><div class="paper-guide" id="paperGuide"></div><div class="empty-tip" id="emptyTip">① 左の部品をクリック → ② カードをドラッグ → ③ 右下でサイズ変更</div></div></main>
     <div class="selection-bar" id="selectionBar" aria-live="polite"><span class="selection-count" id="selectionCount">1枚選択中</span><button class="btn" id="editSelectedBtn">✎ 編集</button><button class="btn" id="quickDuplicateBtn">複製</button><button class="btn danger" id="quickDeleteBtn">削除</button><button class="btn" id="clearSelectionBtn">選択解除</button></div>
+    <div class="selection-bar part-bar" id="partBar" aria-live="polite"><span class="selection-count" id="partInfo">部品</span><button class="btn" id="partImageBtn">🖼 画像を差し替え</button><input type="file" id="partImageFile" accept="image/png,image/jpeg,image/webp" hidden><button class="btn" id="partTextBtn">✎ 文字</button><button class="btn" id="partCheckBtn">☑ 切替</button><input class="field-input part-size" id="partSize" type="number" min="8" max="96" title="文字サイズ"><button class="btn" id="partBoldBtn" title="太字"><b>B</b></button><select class="select" id="partAlign" title="配置"><option value="left">左</option><option value="center">中央</option><option value="right">右</option></select><button class="btn primary" id="partBackBtn">↩ カード選択に戻る</button></div>
   </div>
 </div>
 <dialog class="edit-dialog" id="editDialog">
@@ -55,7 +56,9 @@ iv class="advanced-section">
     checklist:{title:'チェックリスト',body:'確認項目・完了項目・点検項目など',w:360,h:230},
     notes:{title:'メモ・備考',body:'注意事項・連絡事項・自由記述など',w:380,h:210},
     drawing:{title:'手書きエリア',body:'ペン入力・署名・スケッチなどを想定',w:520,h:360},
-    generic:{title:'自由カード',body:'任意の業務項目に使う汎用カード',w:320,h:180}
+    generic:{title:'自由カード',body:'任意の業務項目に使う汎用カード',w:320,h:180},
+    image:{title:'画像カード',body:'画像部品つき。画像だけ差し替え可能',cardBody:'',w:380,h:300},
+    form:{title:'入力フォーム',body:'入力欄・チェック・ボタンの部品つき',cardBody:'',w:360,h:210}
   };
 
   const EXTENSION_PACKS={

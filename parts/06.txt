@@ -16,5 +16,5 @@ if(!t)return;if(confirmReplace&&cards.length&&!confirm('現在のカードをテ
 
   function undo(){if(!undoStack.length)return;redoStack.push(snapshot());restoreSnapshot(undoStack.pop());markDirty()}
   function redo(){if(!redoStack.length)return;undoStack.push(snapshot());restoreSnapshot(redoStack.pop());markDirty()}
-  function layoutPayload(){return {app:'business-layout-designer',version:8,cards:clone(cards),settings:{guideVisible,paperSize,snapEnabled,activeExtension,activeTemplateId,constrainToGuide,referenceImage:{visible:referenceMeta.visible,opacity:referenceMeta.opacity,localOnly:true}}}}
+  function layoutPayload(){return {app:'business-layout-designer',version:9,cards:cards.map(exportCard),assets:clone(usedAssets()),settings:{guideVisible,paperSize,snapEnabled,activeExtension,activeTemplateId,constrainToGuide,referenceImage:{visible:referenceMeta.visible,opacity:referenceMeta.opacity,localOnly:true}}}}
   function save(){clearTimeout(autosaveTimer);try{lastManualSavedAt=

@@ -50,8 +50,22 @@
   },
   "humanDecisionSync": {
     "schemaVersion": 1,
-    "decisions": [],
-    "currentState": "Human Decision Sync is enabled. No project-specific mutable human decisions were backfilled automatically; the current canonicalContract remains implementation authority.",
-    "nextAction": "Record future explicit human-confirmed mutable decisions here before implementation whenever they change project authority."
+    "decisions": [
+      {
+        "id": "hds-20260926-parts-json-v1",
+        "topic": "project-intake:parts-json-v1",
+        "status": "CONFIRMED",
+        "summary": "カード内部のパーツ単位編集、画像だけの差し替え、JSON完全保存・復元を既存機能を壊さず最小変更で追加し、API・MCP・AI自動生成・大規模バックエンド追加は今回実施しない。",
+        "decidedAt": "2026-09-26",
+        "source": "EXPLICIT_HUMAN",
+        "type": "DESIGN",
+        "replaces": null,
+        "artifactIds": [
+          "business-layout-designer-project-v1"
+        ]
+      }
+    ],
+    "currentState": "parts-json-v1 の改善方針が人間により明示確定。実装はパーツ単位編集、画像のみ差し替え、JSON完全保存・復元に限定する。",
+    "nextAction": "Approved project intake parts-json-v1 に従い、preflight後にClaude CLI実装経路で最小変更を行う。"
   }
 }
