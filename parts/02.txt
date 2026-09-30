@@ -14,7 +14,7 @@ iv class="advanced-section">
           <select class="select pack-select" id="extensionPack" aria-label="業種別拡張"></select><div class="pack-note" id="packNote">汎用コアだけで使用します。</div><div class="palette" id="extensionPalette"></div>
           <div class="advanced-title">非表示カード</div><div class="pack-note" id="hiddenList">なし</div>
           <div class="advanced-title">選択カードを整列</div><div class="selection-info" id="selectionInfo">選択なし</div><div class="layout-actions"><button data-align="left">左揃え</button><button data-align="top">上揃え</button><button data-align="hspace">横等間隔</button><button data-align="vspace">縦等間隔</button></div>
-          <div class="hint">複数選択：<span class="kbd">Shift</span>＋クリック。iPad等は空白を2本指でピンチ。<br><span class="kbd">Ctrl</span>+<span class="kbd">S</span> 保存 / <span class="kbd">Ctrl</span>+<span class="kbd">A</span> 全選択 / <span class="kbd">Delete</span> 削除</div>
+          <div class="hint">複数選択：<span class="kbd">Ctrl</span>＋クリック、または <span class="kbd">Shift</span>＋クリック。選択後、そのまままとめてドラッグできます。<br><span class="kbd">Ctrl</span>+<span class="kbd">S</span> 保存 / <span class="kbd">Ctrl</span>+<span class="kbd">A</span> 全選択 / <span class="kbd">Delete</span> 削除</div>
           <div class="arch-note">共通エンジン → 汎用部品 → 任意の業種別拡張。</div>
         </div>
       </details>
