@@ -51,6 +51,32 @@ assert.ok(pd.includes('selectedPart.cardId!==c.id)return;e.stopPropagation()'),'
 const cardPd=src.match(/el\.addEventListener\('pointerdown',[^\n]*\);return el\}/)?.[0]||'';
 assert.ok(cardPd.includes('.part-free')&&!/closest\('\.mini,\.resize-handle,\.part-free'\)/.test(cardPd),'card handler receives free-part pointerdown');
 assert.ok(cardPd.includes('toggleOnClick:wasSelected&&!additive')&&cardPd.includes('basePartId:baseEl?.dataset.partId'),'click on selected card part enters part mode');
+assert.ok(cardPd.includes('e.shiftKey||e.ctrlKey||e.metaKey'),'desktop multi-select supports Shift/Ctrl/Command modifiers');
+has("id=\"selectAllBtn\"");
+has("data-align=\"balance\"");
+has("$('selectAllBtn').onclick");
+has("kind==='balance'");
+has("if(kind!=='balance')sel.forEach(clampCardToGuide)");
+const alignSrc=src.match(/function align\(kind\)\{[^\n]*\}/)?.[0]||'';
+assert.ok(alignSrc,'align function found');
+const balanceCards=[
+  {id:'a',x:0,y:0,w:300,h:140,locked:false,movable:true},
+  {id:'b',x:320,y:0,w:400,h:170,locked:false,movable:true},
+  {id:'c',x:0,y:200,w:900,h:230,locked:false,movable:true},
+  {id:'d',x:0,y:450,w:850,h:80,locked:false,movable:true},
+  {id:'e',x:0,y:550,w:420,h:100,locked:false,movable:true},
+  {id:'f',x:440,y:550,w:420,h:100,locked:false,movable:true}
+];
+const beforeSizes=new Map(balanceCards.map(c=>[c.id,[c.w,c.h]]));
+const runAlign=new Function('selectedCards','pushHistory','snap','currentBounds','clampCardToGuide','markDirty','render','setStatus',`${alignSrc};return align;`)(
+  ()=>balanceCards,()=>{},v=>v,()=>({left:0,top:0,right:1000,bottom:700}),()=>{},()=>{},()=>{},()=>{}
+);
+runAlign('balance');
+for(let i=0;i<balanceCards.length;i++)for(let j=i+1;j<balanceCards.length;j++){
+  const a=balanceCards[i],b=balanceCards[j],overlap=a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  assert.equal(overlap,false,`balanced cards must not overlap: ${a.id}/${b.id}`);
+}
+balanceCards.forEach(c=>assert.deepEqual([c.w,c.h],beforeSizes.get(c.id),'balance keeps card size'));
 has('selectPart(c.id,basePartId)');
 // defect 3: duplicateSelected keeps copied card title AND copied heading-part text (functional)
 const buildDup=new Function('uid','clone','selectedCards','pushHistory','clampCardToGuide','markDirty','render',`${partTypes}\n${['normalizeRules','safeCardBase','isRefCard','partBase','defaultParts','normalizeParts','syncBaseParts','syncCardFromPart','safeCard','duplicateSelected'].map(fn).join('\n')}\nlet cards=[],selectedIds=new Set(),primaryId=null;\nreturn {run(){cards=[];duplicateSelected();return {cards,selectedIds,primaryId}},safeCard};`);
