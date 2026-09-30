@@ -52,6 +52,10 @@ const cardPd=src.match(/el\.addEventListener\('pointerdown',[^\n]*\);return el\}
 assert.ok(cardPd.includes('.part-free')&&!/closest\('\.mini,\.resize-handle,\.part-free'\)/.test(cardPd),'card handler receives free-part pointerdown');
 assert.ok(cardPd.includes('toggleOnClick:wasSelected&&!additive')&&cardPd.includes('basePartId:baseEl?.dataset.partId'),'click on selected card part enters part mode');
 assert.ok(cardPd.includes('e.shiftKey||e.ctrlKey||e.metaKey'),'desktop multi-select supports Shift/Ctrl/Command modifiers');
+has("id=\"selectAllBtn\"");
+has("data-align=\"balance\"");
+has("$('selectAllBtn').onclick");
+has("kind==='balance'");
 has('selectPart(c.id,basePartId)');
 // defect 3: duplicateSelected keeps copied card title AND copied heading-part text (functional)
 const buildDup=new Function('uid','clone','selectedCards','pushHistory','clampCardToGuide','markDirty','render',`${partTypes}\n${['normalizeRules','safeCardBase','isRefCard','partBase','defaultParts','normalizeParts','syncBaseParts','syncCardFromPart','safeCard','duplicateSelected'].map(fn).join('\n')}\nlet cards=[],selectedIds=new Set(),primaryId=null;\nreturn {run(){cards=[];duplicateSelected();return {cards,selectedIds,primaryId}},safeCard};`);
