@@ -22,3 +22,16 @@
 - 「↩ カード選択に戻る」（または Esc）でカード選択へ戻ります。Undo / Redo は部品編集・画像差し替えも対象です。
 - JSON / LocalStorage: 各カードに `cardId, cardType, x, y, width, height, zIndex, parts[]`、各部品に `partId, partType, x, y, width, height, text, imageRef, fontSize, fontWeight, alignment`。画像本体はトップレベル `assets`（`imageRef` → `assetId`、dataUrl）に含まれ、JSONだけで復元できます。旧形式JSON（parts/assetsなし、`id/w/h`）もそのまま読み込めます。
 - テスト: `node scripts/frontend-parts-selftest.mjs`
+
+## 画像からパーツを切り出して AI に渡す
+
+1. 左側の「基準画像を読み込む」で PNG / JPEG / WebP を選択する。
+2. 「囲んでパーツ化」を押し、画像上で範囲をドラッグする。Esc で範囲選択を終了する。
+3. 切り出した画像カードを移動・サイズ変更する。カードを選んで「部品の種類」を変更できる。部品名はカード編集から変更する。
+4. 「AIに渡すZIPを保存」で端末にファイルを保存し、確認した ZIP を ChatGPT に手動で渡す。
+
+ZIP は `preview.png`（画像ベースの配置プレビュー）、`layout.json`（カードの位置・サイズ・名称・種類と切り出し範囲）、`parts/`（個々の切り出し PNG）で構成する。HTML の入力カード等はプレビュー内で簡易描画のため、位置・サイズの正本は JSON とする。背景の切り出し跡は見やすさのため近傍色で塗りつぶす。元画像の実体は変更・削除せずローカルに保持する。画像本体を従来のレイアウト JSON に追加せず、外部 API・MCP・CDN・送信処理は利用しない。
+
+**注意**: AI 用 ZIP には画像の可視内容・部品画像が含まれる。患者情報、実データ、機密情報を含むスクリーンショットは AI へ渡さないこと。ZIP の保存は外部への自動送信を意味しない。
+
+検証: `node scripts/frontend-parts-selftest.mjs` と `node scripts/image-handoff-selftest.mjs` を実行する。

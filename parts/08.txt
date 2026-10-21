@@ -4,6 +4,204 @@ emplateSelect.onchange=()=>{activeTemplateId=templateSelect.value;renderTemplate
   partBackBtn.onclick=backToCard;partImageBtn.onclick=()=>partImageFile.click();partImageFile.onchange=()=>{const f=partImageFile.files?.[0],s=selectedPart;if(f&&s)replacePartImage(f,s.cardId,s.partId);else partImageFile.value=''};partTextBtn.onclick=editPartText;partCheckBtn.onclick=()=>editPart(p=>{p.checked=!p.checked});partBoldBtn.onclick=()=>editPart(p=>{p.fontWeight=p.fontWeight>=600?400:700});partAlign.onchange=()=>editPart(p=>{p.alignment=['left','center','right'].includes(partAlign.value)?partAlign.value:'left'});partSize.onchange=()=>{const v=Math.min(96,Math.max(8,Number(partSize.value)||13));editPart(p=>{p.fontSize=v})};
   window.addEventListener('beforeunload',()=>{if(dirty)writeDraft()});
 
+
+  // Image crop / AI handoff.  Local-only browser processing; never uploads images.
+  const cutBtn=$('referenceCutBtn'),cutKind=$('referenceCutKind'),handoffBtn=$('handoffExportBtn');
+  const cutLayer=document.createElement('div'),rubber=document.createElement('div');
+  let cutting=false,anchor=null,maskKey='',maskUrl=null,maskGeneration=0;
+  cutLayer.id='referenceCutLayer';cutLayer.setAttribute('aria-label','切り抜く範囲をドラッグして囲む');
+  cutLayer.style.cssText='position:absolute;z-index:40;cursor:crosshair;touch-action:none;display:none;';
+  rubber.style.cssText='position:absolute;display:none;border:2px solid #2563eb;box-sizing:border-box;background:rgba(37,99,235,.15);pointer-events:none';
+  cutLayer.appendChild(rubber);stage.appendChild(cutLayer);
+  const canvasBlob=(canvas)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG生成に失敗')),'image/png'));
+  const cutCoordinates=(a,b)=>({x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)});
+  function cropPlacement(){
+    const f=currentFormat(),w=referenceRecord.width,h=referenceRecord.height,scale=Math.min(f.w/w,f.h/h);
+    return {f,scale,left:(f.w-w*scale)/2,top:(f.h-h*scale)/2,width:w*scale,height:h*scale};
+  }
+  function pointInCut(e){
+    const r=cutLayer.getBoundingClientRect(),f=currentFormat();
+    return {x:Math.max(0,Math.min(f.w,(e.clientX-r.left)*f.w/r.width)),
+      y:Math.max(0,Math.min(f.h,(e.clientY-r.top)*f.h/r.height))};
+  }
+  function showRubber(rect){rubber.style.display='block';
+    rubber.style.left=rect.x+'px';rubber.style.top=rect.y+'px';
+    rubber.style.width=rect.w+'px';rubber.style.height=rect.h+'px';
+  }
+  function setCutMode(on){
+    cutting=!!on&&!!referenceRecord;anchor=null;rubber.style.display='none';
+    const f=currentFormat();cutLayer.style.left=PAPER_ORIGIN.x+'px';
+    cutLayer.style.top=PAPER_ORIGIN.y+'px';cutLayer.style.width=f.w+'px';cutLayer.style.height=f.h+'px';
+    cutLayer.style.display=cutting?'block':'none';cutBtn.classList.toggle('active',cutting);
+    cutBtn.textContent=cutting?'✂ 切り抜き終了（Esc）':'✂ 囲んでパーツ化';
+    if(cutting)setStatus('基準画像の切り抜きたい場所をドラッグしてください');
+  }
+  cutBtn.addEventListener('click',()=>setCutMode(!cutting));
+  cutLayer.addEventListener('pointerdown',e=>{if(e.button!==0||!referenceRecord)return;
+    e.preventDefault();e.stopPropagation();anchor=pointInCut(e);showRubber({x:anchor.x,y:anchor.y,w:0,h:0});
+    cutLayer.setPointerCapture(e.pointerId);
+  });
+  cutLayer.addEventListener('pointermove',e=>{if(!anchor)return;showRubber(cutCoordinates(anchor,pointInCut(e)))});
+  function endCut(e){
+    if(!anchor)return;const rect=cutCoordinates(anchor,pointInCut(e));anchor=null;rubber.style.display='none';
+    if(cutLayer.hasPointerCapture(e.pointerId))cutLayer.releasePointerCapture(e.pointerId);
+    if(e.type==='pointercancel'||rect.w<10||rect.h<10)return;
+    const p=cropPlacement(),x1=Math.max(p.left,rect.x),y1=Math.max(p.top,rect.y),
+      x2=Math.min(p.left+p.width,rect.x+rect.w),y2=Math.min(p.top+p.height,rect.y+rect.h);
+    if(x2-x1<10||y2-y1<10){setStatus('画像が表示されている範囲を囲んでください');return}
+    const sx=Math.max(0,Math.round((x1-p.left)/p.scale)),sy=Math.max(0,Math.round((y1-p.top)/p.scale));
+    const sw=Math.min(referenceRecord.width-sx,Math.max(1,Math.round((x2-x1)/p.scale)));
+    const sh=Math.min(referenceRecord.height-sy,Math.max(1,Math.round((y2-y1)/p.scale)));
+    pushHistory();
+    const id=uid(),name='切り抜き '+(cards.filter(c=>!!c.referenceSlice).length+1);
+    const c=safeCard({id,componentKey:'image',source:'generic',title:name,body:'',
+      x:PAPER_ORIGIN.x+x1,y:PAPER_ORIGIN.y+y1,w:x2-x1,h:y2-y1,
+      captureType:cutKind.value,referenceSlice:{x:sx,y:sy,w:sw,h:sh,
+        sourceWidth:referenceRecord.width,sourceHeight:referenceRecord.height}});
+    cards.push(c);selectedIds=new Set([id]);primaryId=id;selectedPart=null;markDirty();render();
+    setStatus('切り抜きました。切り抜き終了後、ドラッグで移動できます');
+  }
+  cutLayer.addEventListener('pointerup',endCut);cutLayer.addEventListener('pointercancel',endCut);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&cutting){setCutMode(false);e.stopImmediatePropagation()}},true);
+  function referenceSlices(){return cards.filter(c=>!!c.referenceSlice&&!c.hidden);}
+  // The source bitmap is never modified; background holes are a generated display copy.
+  function eraseSliceAreas(ctx,items){
+    items.forEach(c=>{const s=c.referenceSlice;
+      const x=Math.max(0,Math.floor(s.x)),y=Math.max(0,Math.floor(s.y));
+      const w=Math.min(ctx.canvas.width-x,Math.ceil(s.w)),h=Math.min(ctx.canvas.height-y,Math.ceil(s.h));
+      if(w<=0||h<=0)return;
+      const sample=ctx.getImageData(Math.max(0,x-2),Math.max(0,y-2),1,1).data;
+      ctx.fillStyle='rgb('+sample[0]+','+sample[1]+','+sample[2]+')';ctx.fillRect(x,y,w,h);
+    });
+  }
+  function refreshReferenceMask(){
+    if(!referenceRecord||!referenceObjectUrl)return;
+    const slices=referenceSlices(),key=referenceRecord.updatedAt+'|'+JSON.stringify(slices.map(c=>c.referenceSlice));
+    if(key===maskKey)return;maskKey=key;const generation=++maskGeneration;
+    if(!slices.length){
+      if(maskUrl){URL.revokeObjectURL(maskUrl);maskUrl=null}
+      referenceImageEl.src=referenceObjectUrl;return;
+    }
+    (async()=>{
+      const bm=await createImageBitmap(referenceRecord.blob);
+      const canvas=document.createElement('canvas');canvas.width=bm.width;canvas.height=bm.height;
+      const ctx=canvas.getContext('2d');ctx.drawImage(bm,0,0);bm.close();
+      eraseSliceAreas(ctx,slices);const blob=await canvasBlob(canvas);
+      if(generation!==maskGeneration)return;
+      const next=URL.createObjectURL(blob);referenceImageEl.src=next;
+      if(maskUrl)URL.revokeObjectURL(maskUrl);maskUrl=next;
+    })().catch(()=>{if(generation===maskGeneration)referenceImageEl.src=referenceObjectUrl});
+  }
+  function syncCutControls(){
+    cutBtn.disabled=!referenceRecord;handoffBtn.disabled=!cards.length&&!referenceRecord;
+    if(!referenceRecord){
+      if(cutting)setCutMode(false);
+      maskGeneration++;maskKey='';
+      if(maskUrl){URL.revokeObjectURL(maskUrl);maskUrl=null}
+    }
+    if(cutting){const f=currentFormat();cutLayer.style.width=f.w+'px';cutLayer.style.height=f.h+'px'}
+    refreshReferenceMask();
+  }
+  const originalSyncRef=syncReferenceControls;
+  syncReferenceControls=function(){originalSyncRef();syncCutControls()};
+  const originalSelectCropCard=selectCard;
+  selectCard=function(id,additive){originalSelectCropCard(id,additive);const c=cards.find(x=>x.id===id);
+    if(c?.referenceSlice&&selectedIds.has(id))cutKind.value=c.captureType||'画像';
+  };
+  cutKind.addEventListener('change',()=>{const chosen=selectedCards();
+    if(chosen.length!==1||!chosen[0].referenceSlice)return;
+    pushHistory();chosen[0].captureType=cutKind.value;markDirty();render();setStatus('パーツの種類を変更しました');
+  });
+  // Generate a stable, browser-native preview for the cropped image parts.
+  function drawReferenceCard(ctx,bm,c){
+    const s=c.referenceSlice,dx=c.x-PAPER_ORIGIN.x,dy=c.y-PAPER_ORIGIN.y;
+    const scale=Math.min(c.w/s.w,c.h/s.h),padX=(c.w-s.w*scale)/2,padY=(c.h-s.h*scale)/2;
+    ctx.save();ctx.beginPath();ctx.rect(dx,dy,c.w,c.h);ctx.clip();
+    ctx.fillStyle='#ffffff';ctx.fillRect(dx,dy,c.w,c.h);
+    ctx.drawImage(bm,dx+padX-s.x*scale,dy+padY-s.y*scale,bm.width*scale,bm.height*scale);
+    ctx.restore();
+  }
+  async function makeHandoffFiles(){
+    const f=currentFormat(),items=cards.filter(c=>!c.hidden);
+    const preview=document.createElement('canvas');preview.width=f.w;preview.height=f.h;
+    const ctx=preview.getContext('2d');
+    ctx.fillStyle='#f5f8fc';ctx.fillRect(0,0,f.w,f.h);
+    const bm=referenceRecord?await createImageBitmap(referenceRecord.blob):null;
+    if(bm&&referenceMeta.visible){
+      const p=cropPlacement(),ref=document.createElement('canvas');ref.width=bm.width;ref.height=bm.height;
+      const rc=ref.getContext('2d');rc.drawImage(bm,0,0);eraseSliceAreas(rc,referenceSlices());
+      ctx.drawImage(ref,p.left,p.top,p.width,p.height);
+    }
+    for(const c of items){
+      if(c.referenceSlice&&bm){drawReferenceCard(ctx,bm,c);continue}
+      ctx.save();const x=c.x-PAPER_ORIGIN.x,y=c.y-PAPER_ORIGIN.y;
+      ctx.fillStyle='#fff';ctx.strokeStyle='#bfccda';ctx.lineWidth=1;ctx.fillRect(x,y,c.w,c.h);ctx.strokeRect(x,y,c.w,c.h);
+      ctx.fillStyle='#223a58';ctx.font='bold 15px sans-serif';ctx.fillText(c.title,x+10,y+25,Math.max(20,c.w-20));
+      if(c.body){ctx.font='12px sans-serif';ctx.fillText(c.body.slice(0,100),x+10,y+47,Math.max(20,c.w-20))}
+      ctx.restore();
+    }
+    const layout={
+      app:'business-layout-designer',handoffVersion:1,unit:'px',
+      viewport:{width:f.w,height:f.h},preview:'preview.png',previewNote:'画像パーツは再現。通常のHTMLカードは簡易描画。layout.jsonを正本とする。',
+      sourceImageIncluded:false,sourceImageSize:bm?{width:bm.width,height:bm.height}:null,
+      cards:items.map((c,i)=>({
+        id:c.id,name:c.title,kind:c.captureType||(c.referenceSlice?'画像':'カード'),order:i+1,
+        x:c.x-PAPER_ORIGIN.x,y:c.y-PAPER_ORIGIN.y,width:c.w,height:c.h,
+        locked:!!c.locked,sourceRect:c.referenceSlice?{x:c.referenceSlice.x,y:c.referenceSlice.y,width:c.referenceSlice.w,height:c.referenceSlice.h}:null,
+        image:c.referenceSlice?'parts/'+String(i+1).padStart(3,'0')+'.png':null,
+        text:c.referenceSlice?null:c.body,parts:c.referenceSlice?[]:(c.parts||[]).map(p=>({id:p.partId,type:p.partType,
+          x:p.x,y:p.y,width:p.width,height:p.height,text:p.text||null}))
+      }))
+    };
+    const files=[{name:'preview.png',bytes:new Uint8Array(await (await canvasBlob(preview)).arrayBuffer())},
+      {name:'layout.json',bytes:new TextEncoder().encode(JSON.stringify(layout,null,2))}];
+    if(bm){
+      for(let i=0;i<items.length;i++){
+        const c=items[i];if(!c.referenceSlice)continue;const s=c.referenceSlice;
+        const can=document.createElement('canvas');can.width=Math.max(1,Math.round(s.w));can.height=Math.max(1,Math.round(s.h));
+        can.getContext('2d').drawImage(bm,s.x,s.y,s.w,s.h,0,0,can.width,can.height);
+        files.push({name:'parts/'+String(i+1).padStart(3,'0')+'.png',
+          bytes:new Uint8Array(await (await canvasBlob(can)).arrayBuffer())});
+      }
+      bm.close();
+    }
+    return files;
+  }
+  // Simple ZIP with stored entries (no dependencies, no network).
+  function zipU16(view,o,n){view.setUint16(o,n,true)}
+  function zipU32(view,o,n){view.setUint32(o,n>>>0,true)}
+  function crc32Zip(bytes){let n=0xffffffff;for(const b of bytes){n^=b;for(let j=0;j<8;j++)n=(n>>>1)^((n&1)?0xedb88320:0)}return(n^0xffffffff)>>>0}
+  function buildZip(files){
+    const utf8=new TextEncoder(),locals=[],central=[];let offset=0,centralSize=0;
+    for(const file of files){
+      const name=utf8.encode(file.name),data=file.bytes,crc=crc32Zip(data);
+      const local=new Uint8Array(30+name.length+data.length),lv=new DataView(local.buffer);
+      zipU32(lv,0,0x04034b50);zipU16(lv,4,20);zipU16(lv,6,0x0800);zipU16(lv,8,0);
+      zipU32(lv,14,crc);zipU32(lv,18,data.length);zipU32(lv,22,data.length);zipU16(lv,26,name.length);
+      local.set(name,30);local.set(data,30+name.length);locals.push(local);
+      const cd=new Uint8Array(46+name.length),cv=new DataView(cd.buffer);
+      zipU32(cv,0,0x02014b50);zipU16(cv,4,20);zipU16(cv,6,20);zipU16(cv,8,0x0800);
+      zipU32(cv,16,crc);zipU32(cv,20,data.length);zipU32(cv,24,data.length);zipU16(cv,28,name.length);
+      zipU32(cv,42,offset);cd.set(name,46);central.push(cd);offset+=local.length;centralSize+=cd.length;
+    }
+    if(files.length>65535)throw new Error('ZIP上限を超えています');
+    const end=new Uint8Array(22),ev=new DataView(end.buffer);zipU32(ev,0,0x06054b50);
+    zipU16(ev,8,files.length);zipU16(ev,10,files.length);zipU32(ev,12,centralSize);zipU32(ev,16,offset);
+    return new Blob([...locals,...central,end],{type:'application/zip'});
+  }
+  handoffBtn.addEventListener('click',async()=>{
+    if(handoffBtn.disabled)return;
+    if(!confirm('患者氏名などの機密情報を含む画像はAIに渡せません。サンプル画像など、共有してよい内容であることを確認しましたか？'))return;
+    handoffBtn.disabled=true;setStatus('AI受け渡し用ZIPを端末内で生成中…');
+    try{
+      const files=await makeHandoffFiles(),url=URL.createObjectURL(buildZip(files));
+      const a=document.createElement('a');a.href=url;a.download='layout-ai-handoff.zip';document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      setStatus('AI受け渡し用ZIPを保存しました。自動送信はしていません');
+    }catch(err){alert('書き出しに失敗しました：'+String(err?.message||err))}
+    finally{handoffBtn.disabled=false}
+  });
+
   load();renderPaperOptions();renderPalettes();renderTemplates();updatePaperGuide();render();loadReferenceImageFromStore();requestAnimationFrame(fitView);
 })();
 </script>
